@@ -176,7 +176,7 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
     suspend fun updateUser(user: User) {
         userDao.update(user)
     }
-
+    //挂起函数 协程里调用
     suspend fun getUser(baseUrl: String): User? {
         return userDao.get(baseUrl)
     }

@@ -203,8 +203,10 @@ class AddFragment : DialogFragment() {
         subscribeErrorText.visibility = View.GONE
         subscribeErrorTextImage.visibility = View.GONE
         enableSubscribeView(false)
+        //协程
         lifecycleScope.launch(Dispatchers.IO) {
             try {
+                //协程内调用挂起函数
                 val user = repository.getUser(baseUrl) // May be null
                 val authorized = api.checkAuth(baseUrl, topic, user)
                 if (authorized) {
