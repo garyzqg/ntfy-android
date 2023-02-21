@@ -12,6 +12,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
+/**
+ * 轮训notifications
+ */
 class PollWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     // IMPORTANT:
     //   Every time the worker is changed, the periodic work has to be REPLACEd.
@@ -30,16 +33,18 @@ class PollWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
 
             val baseUrl = inputData.getString(INPUT_DATA_BASE_URL)
             val topic = inputData.getString(INPUT_DATA_TOPIC)
+            //数据库拉取所有topic和baseurl
             val subscriptions = if (baseUrl != null && topic != null) {
                 val subscription = repository.getSubscription(baseUrl, topic) ?: return@withContext Result.success()
                 listOf(subscription)
             } else {
                 repository.getSubscriptions()
             }
-
+            //遍历所有订阅的topic
             subscriptions.forEach{ subscription ->
                 try {
                     val user = repository.getUser(subscription.baseUrl)
+                    //拉取对应topic的notification
                     val notifications = api.poll(
                         subscriptionId = subscription.id,
                         baseUrl = subscription.baseUrl,
@@ -47,11 +52,14 @@ class PollWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, 
                         user = user,
                         since = subscription.lastNotificationId
                     )
+                    //获取到消息后 筛选新消息(数据库没有的)
                     val newNotifications = repository
                         .onlyNewNotifications(subscription.id, notifications)
+                        //list.map 转化成另一个list 只copy notificationId字段形成一个新的消息
                         .map { it.copy(notificationId = Random.nextInt()) }
                     newNotifications.forEach { notification ->
                         if (repository.addNotification(notification)) {
+                            //处理新消息
                             dispatcher.dispatch(subscription, notification)
                         }
                     }

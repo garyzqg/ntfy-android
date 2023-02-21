@@ -202,6 +202,7 @@ class SubscriberService : Service() {
             val since = sinceByBaseUrl[connectionId.baseUrl] ?: "none"
             val serviceActive = { isServiceStarted }
             val user = repository.getUser(connectionId.baseUrl)
+            //两种连接方式 http websocket 默认使用http
             val connection = if (repository.getConnectionProtocol() == Repository.CONNECTION_PROTOCOL_WS) {
                 val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
                 WsConnection(connectionId, repository, user, since, ::onStateChanged, ::onNotificationReceived, alarmManager)

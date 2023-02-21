@@ -51,6 +51,8 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
     suspend fun getSubscriptionIdsWithInstantStatus(): Set<Pair<Long, Boolean>> {
         return subscriptionDao
             .list()
+                //toSet() list转化成set 删除重复元素
+                //Pair 二元元组 可以携带两个值得变量
             .map { Pair(it.id, it.instant) }.toSet()
     }
 
@@ -118,6 +120,7 @@ class Repository(private val sharedPrefs: SharedPreferences, private val databas
 
     fun onlyNewNotifications(subscriptionId: Long, notifications: List<Notification>): List<Notification> {
         val existingIds = notificationDao.listIds(subscriptionId)
+        //list.filterNot过滤所有不满足条件的数据 所有数据库里没有的消息id
         return notifications.filterNot { existingIds.contains(it.id) }
     }
 

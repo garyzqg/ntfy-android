@@ -53,6 +53,11 @@ class SubscriberServiceManager(private val context: Context) {
                     return@withContext Result.success()
                 }
                 Log.d(TAG, "ServiceStartWorker: Starting foreground service with action $action (work ID: ${id})")
+                /**
+                 *        it传入  this传入
+                 *
+                 *
+                 */
                 Intent(context, SubscriberService::class.java).also {
                     it.action = action.name
                     ContextCompat.startForegroundService(context, it)

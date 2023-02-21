@@ -7,6 +7,7 @@ import io.heckel.ntfy.db.User
 import io.heckel.ntfy.util.*
 import okhttp3.*
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.use
 import java.io.IOException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets.UTF_8
@@ -84,6 +85,9 @@ class ApiService {
         }
     }
 
+    /**
+     * 拉取对应topic的消息
+     */
     fun poll(subscriptionId: Long, baseUrl: String, topic: String, user: User?, since: String? = null): List<Notification> {
         val sinceVal = since ?: "all"
         val url = topicUrlJsonPoll(baseUrl, topic, sinceVal)
@@ -145,6 +149,9 @@ class ApiService {
         return call
     }
 
+    /**
+     * 验签
+     */
     fun checkAuth(baseUrl: String, topic: String, user: User?): Boolean {
         if (user == null) {
             Log.d(TAG, "Checking anonymous read against ${topicUrl(baseUrl, topic)}")
@@ -153,6 +160,8 @@ class ApiService {
         }
         val url = topicUrlAuth(baseUrl, topic)
         val request = requestBuilder(url, user).build()
+        //execute() 同步请求 ; enqueue() 异步请求
+        //use函数封装了try...catch...finally模板代码，这就是在kotlin中，在IO流上使用use时，不用对流进行关闭的原因，因为kotlin已经对其进行了封装
         client.newCall(request).execute().use { response ->
             if (response.isSuccessful) {
                 return true
@@ -163,6 +172,16 @@ class ApiService {
             }
             throw Exception("Unexpected server response ${response.code}")
         }
+
+//        val response = client.newCall(request).execute()
+//        if (response.isSuccessful) {
+//            return true
+//        } else if (user == null && response.code == 404) {
+//            return true // Special case: Anonymous login to old servers return 404 since /<topic>/auth doesn't exist
+//        } else if (response.code == 401 || response.code == 403) { // See server/server.go
+//            return false
+//        }
+//        throw Exception("Unexpected server response ${response.code}")
     }
 
     class UnauthorizedException(val user: User?) : Exception()
@@ -179,9 +198,11 @@ class ApiService {
         const val EVENT_POLL_REQUEST = "poll_request"
 
         fun requestBuilder(url: String, user: User?): Request.Builder {
+            //默认get请求
             val builder = Request.Builder()
                 .url(url)
                 .addHeader("User-Agent", USER_AGENT)
+            Log.d(TAG,"URL ===  " + url)
             if (user != null) {
                 builder.addHeader("Authorization", Credentials.basic(user.username, user.password, UTF_8))
             }

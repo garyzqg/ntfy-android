@@ -206,8 +206,12 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         AppCompatDelegate.setDefaultNightMode(repository.getDarkMode())
 
         // Background things
+        //轮训获取消息
         schedulePeriodicPollWorker()
+
+        //服务重启
         schedulePeriodicServiceRestartWorker()
+        //删除任务
         schedulePeriodicDeleteWorker()
 
         // Permissions
@@ -248,9 +252,25 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         wsBanner.visibility = if (showBanner) View.VISIBLE else View.GONE
     }
 
+    /**
+     * 后台任务-轮训获取消息 1小时一次
+     * WorkManager是针对一些即使App退出了也要由系统确保运行的任务设计的，可以延迟执行后台任务/
+
+        · Worker：指定我们需要执行的任务
+
+        · WorkRequest：代表一个单独具体的任务。一个WorkRequest对象指定某个Worker类应该执行该任务。同时可以向WorkRequest对象中添加详细信息，指定任务运行的环境。每个WorkManager都有一个自动生成的唯一ID，我们可以使用此ID执行取消排队或者获取任务状态等内容。我们一般使用WorkManager的子类：OneTimeWorkRequest或PeriodicWorkRequest
+
+        · WorkRequest.Builder：用于创建WorkRequest对象。常用OneTimeWorkRequest.Builder或PeriodicWorkRequest.Builder
+
+        · Constraints：指定任务何时何状态运行。我们通过Constraints.Builder创建Constraints对象，并在创建WorkRequest前将Constraints对象传递给WorkRequest.Builder
+
+        · WorkManager：将WorkRequest入队并管理。我们将WorkRequest对象传递给WorkManager，由WorkManager同意调度并遵守我们约定的约束条件
+
+        · WorkStatus：包含有关特定任务的信息。WorkManager为每个WorkRequest对象提供一个LiveData，LiveData持有一个WorkStatus，通过观察LiveData确认任务的当前状态
+     */
     private fun schedulePeriodicPollWorker() {
         val workerVersion = repository.getPollWorkerVersion()
-        val workPolicy = if (workerVersion == PollWorker.VERSION) {
+        val workPolicy = if (workerVersion == PollWorker.VERSION) {//取versioncode
             Log.d(TAG, "Poll worker version matches: choosing KEEP as existing work policy")
             ExistingPeriodicWorkPolicy.KEEP
         } else {
@@ -258,15 +278,35 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
             repository.setPollWorkerVersion(PollWorker.VERSION)
             ExistingPeriodicWorkPolicy.REPLACE
         }
+
+        /**
+         * 工作约束 约束可确保将工作延迟到满足最佳条件时运行
+         * 详见 https://blog.csdn.net/Mr_Tony/article/details/125600406?spm=1001.2014.3001.5502
+         */
         val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .setRequiredNetworkType(NetworkType.CONNECTED)//只在网络连接情况下执行work
             .build()
+
+        /**
+         * OneTimeWorkRequest.Builder用于构建单次运行的后台任务请求
+         * PeriodicWorkRequest.Builder用于构建周期运行的后台任务请求，且运行间隔不能短于15 mins
+         * 每个工作请求都可以设置一个唯一标识符，该标识符可用于在以后标识该工作，以便取消工作或观察其进度
+         * 可以向单个工作请求添加多个标记。这些标记在内部以一组字符串的形式进行存储
+         */
+
         val work = PeriodicWorkRequestBuilder<PollWorker>(POLL_WORKER_INTERVAL_MINUTES, TimeUnit.MINUTES)
             .setConstraints(constraints)
             .addTag(PollWorker.TAG)
             .addTag(PollWorker.WORK_NAME_PERIODIC_ALL)
             .build()
         Log.d(TAG, "Poll worker: Scheduling period work every $POLL_WORKER_INTERVAL_MINUTES minutes")
+        /**
+         *WorkManager.enqueueUniqueWork()（用于一次性工作）
+         *WorkManager.enqueueUniquePeriodicWork()（用于定期工作）
+         *existingWorkPolicy - 此 enum 可告知 WorkManager：如果已有使用该名称且尚未完成的唯一工作链，应执行什么操作
+         * REPLACE：用新工作替换现有工作。此选项将取消现有工作
+         * KEEP：保留现有工作，并忽略新工作。
+         */
         workManager!!.enqueueUniquePeriodicWork(PollWorker.WORK_NAME_PERIODIC_ALL, workPolicy, work)
     }
 
@@ -288,6 +328,9 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         workManager!!.enqueueUniquePeriodicWork(DeleteWorker.WORK_NAME_PERIODIC_ALL, workPolicy, work)
     }
 
+    /**
+     * 后台任务-服务重启,3小时一次
+     */
     private fun schedulePeriodicServiceRestartWorker() {
         val workerVersion = repository.getAutoRestartWorkerVersion()
         val workPolicy = if (workerVersion == SubscriberService.SERVICE_START_WORKER_VERSION) {
@@ -343,7 +386,9 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         }
     }
 
+    //暂停通知图标
     private fun showHideNotificationMenuItems() {
+        //对于 lateinit 延迟初始化 的属性 , 在使用前可以执行此语句查看该属性是否进行了初始化操作
         if (!this::menu.isInitialized) {
             return
         }
@@ -409,6 +454,9 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         }
     }
 
+    /**
+     * 打开通知或展示暂停通知dialogFragment
+     */
     private fun onNotificationSettingsClick(enable: Boolean) {
         if (!enable) {
             Log.d(TAG, "Showing global notification settings dialog")
@@ -441,6 +489,9 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         newFragment.show(supportFragmentManager, AddFragment.TAG)
     }
 
+    /*
+     * 订阅topic成功回调
+     */
     override fun onSubscribe(topic: String, baseUrl: String, instant: Boolean) {
         Log.d(TAG, "Adding subscription ${topicShortUrl(baseUrl, topic)} (instant = $instant)")
 
@@ -464,6 +515,7 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
             newCount = 0,
             lastActive = Date().time/1000
         )
+        //数据库新增topic记录
         viewModel.add(subscription)
 
         // Subscribe to Firebase topic if ntfy.sh (even if instant, just to be sure!)

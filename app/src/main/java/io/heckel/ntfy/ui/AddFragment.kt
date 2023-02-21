@@ -192,8 +192,10 @@ class AddFragment : DialogFragment() {
         val topic = subscribeTopicText.text.toString()
         val baseUrl = getBaseUrl()
         if (subscribeView.visibility == View.VISIBLE) {
+            //无用户名和密码输入框
             checkReadAndMaybeShowLogin(baseUrl, topic)
         } else if (loginView.visibility == View.VISIBLE) {
+            //有用户名和密码输入框
             loginAndMaybeDismiss(baseUrl, topic)
         }
     }
@@ -203,11 +205,12 @@ class AddFragment : DialogFragment() {
         subscribeErrorText.visibility = View.GONE
         subscribeErrorTextImage.visibility = View.GONE
         enableSubscribeView(false)
-        //协程
+        //协程 读取数据库+访问网络
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                //协程内调用挂起函数
+                //协程内调用挂起函数 数据库获取url对应的用户名和密码
                 val user = repository.getUser(baseUrl) // May be null
+                //验签 访问网络 调接口
                 val authorized = api.checkAuth(baseUrl, topic, user)
                 if (authorized) {
                     Log.d(TAG, "Access granted to topic ${topicUrl(baseUrl, topic)}")
