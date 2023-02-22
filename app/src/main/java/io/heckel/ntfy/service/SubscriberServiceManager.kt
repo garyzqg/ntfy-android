@@ -23,6 +23,7 @@ class SubscriberServiceManager(private val context: Context) {
         Log.d(TAG, "Enqueuing work to refresh subscriber service")
         val workManager = WorkManager.getInstance(context)
         val startServiceRequest = OneTimeWorkRequest.Builder(ServiceStartWorker::class.java).build()
+        //一次性后台任务 不重复
         workManager.enqueueUniqueWork(WORK_NAME_ONCE, ExistingWorkPolicy.KEEP, startServiceRequest) // Unique avoids races!
     }
 
@@ -45,21 +46,24 @@ class SubscriberServiceManager(private val context: Context) {
             }
             withContext(Dispatchers.IO) {
                 val app = context.applicationContext as Application
-                val subscriptionIdsWithInstantStatus = app.repository.getSubscriptionIdsWithInstantStatus()
+                val subscriptionIdsWithInstantStatus = app.repository.getSubscriptionIdsWithInstantStatus() //set{(id,instant),(id2,instant2)}
+                //filter() 筛选集合内满足条件的数据 传入的函数必须返回值是boolean (instant) 此句为筛选instant等于true的通知
                 val instantSubscriptions = subscriptionIdsWithInstantStatus.toList().filter { (_, instant) -> instant }.size
                 val action = if (instantSubscriptions > 0) SubscriberService.Action.START else SubscriberService.Action.STOP
                 val serviceState = SubscriberService.readServiceState(context)
                 if (serviceState == SubscriberService.ServiceState.STOPPED && action == SubscriberService.Action.STOP) {
+                    //如果没有订阅任何主题 则直接结束协程 不启动任何服务
                     return@withContext Result.success()
                 }
                 Log.d(TAG, "ServiceStartWorker: Starting foreground service with action $action (work ID: ${id})")
                 /**
-                 *        it传入  this传入
-                 *
-                 *
+                 *                        T作为it传入  作为this传入
+                 * 返回block最后一行结果    let         run、with
+                 * 返回T本身               also        apply
                  */
                 Intent(context, SubscriberService::class.java).also {
                     it.action = action.name
+                    //8.0 以后不希望后台应用运行后台服务，除非特殊条件 一旦通过startForegroundService() 启动前台服务，必须在service 中有startForeground() 配套，不然会出现ANR 或者crash
                     ContextCompat.startForegroundService(context, it)
                 }
             }
@@ -67,6 +71,7 @@ class SubscriberServiceManager(private val context: Context) {
         }
     }
 
+    //静态
     companion object {
         const val TAG = "NtfySubscriberMgr"
         const val WORK_NAME_ONCE = "ServiceStartWorkerOnce"

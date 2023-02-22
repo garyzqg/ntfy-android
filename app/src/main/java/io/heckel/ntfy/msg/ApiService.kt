@@ -32,6 +32,9 @@ class ApiService {
         .build()
     private val parser = NotificationParser()
 
+    /**
+     * 发布
+     */
     fun publish(
         baseUrl: String,
         topic: String,
@@ -109,6 +112,11 @@ class ApiService {
         }
     }
 
+    /**
+     * 订阅
+     * http://10.180.151.105:30888/mytopic/ws?since=none
+     * http://10.180.151.105:30888/mytopic,mytopic2/json?since=none
+     */
     fun subscribe(
         baseUrl: String,
         topics: String,
@@ -202,8 +210,9 @@ class ApiService {
             val builder = Request.Builder()
                 .url(url)
                 .addHeader("User-Agent", USER_AGENT)
-            Log.d(TAG,"URL ===  " + url)
+            Log.i(TAG,"URL ===  " + url)
             if (user != null) {
+                //如果有用户信息 将用户名和密码拼接后 base64编码 放在请求头
                 builder.addHeader("Authorization", Credentials.basic(user.username, user.password, UTF_8))
             }
             return builder

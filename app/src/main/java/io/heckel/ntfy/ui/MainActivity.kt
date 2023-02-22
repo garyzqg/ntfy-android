@@ -151,6 +151,7 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         }
 
         // React to changes in instant delivery setting
+        // 启动一次后台服务
         viewModel.listIdsWithInstantStatus().observe(this) {
             SubscriberServiceManager.refresh(this)
         }
@@ -206,7 +207,7 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         AppCompatDelegate.setDefaultNightMode(repository.getDarkMode())
 
         // Background things
-        //轮训获取消息
+        //轮训拉取缓存消息
         schedulePeriodicPollWorker()
 
         //服务重启
@@ -525,6 +526,7 @@ class MainActivity : AppCompatActivity(), ActionMode.Callback, AddFragment.Subsc
         }
 
         // Fetch cached messages
+        // 拉取提取缓存的消息
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val user = repository.getUser(subscription.baseUrl) // May be null

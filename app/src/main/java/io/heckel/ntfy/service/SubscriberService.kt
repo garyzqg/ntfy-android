@@ -201,6 +201,7 @@ class SubscriberService : Service() {
 
             val since = sinceByBaseUrl[connectionId.baseUrl] ?: "none"
             val serviceActive = { isServiceStarted }
+            //获取用户名和密码
             val user = repository.getUser(connectionId.baseUrl)
             //两种连接方式 http websocket 默认使用http
             val connection = if (repository.getConnectionProtocol() == Repository.CONNECTION_PROTOCOL_WS) {
@@ -244,6 +245,7 @@ class SubscriberService : Service() {
                 }
             }
             serviceNotification = createNotification(title, text)
+            //发送通知
             notificationManager?.notify(NOTIFICATION_SERVICE_ID, serviceNotification)
         }
     }
