@@ -100,7 +100,7 @@ class NotificationService(val context: Context) {
             .setOnlyAlertOnce(true) // Do not vibrate or play sound if already showing (updates!)
             .setAutoCancel(true) // Cancel when notification is clicked
         setStyleAndText(builder, subscription, notification) // Preview picture or big text style
-        setClickAction(builder, subscription, notification)
+//        setClickAction(builder, subscription, notification)
         maybeSetDeleteIntent(builder, insistent)
         maybeSetSound(builder, insistent, update)
         maybeSetProgress(builder, notification)
