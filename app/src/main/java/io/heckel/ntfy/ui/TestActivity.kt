@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatButton
 import io.heckel.ntfy.R
-import io.heckel.ntfy.util.initNotificationModule
+import io.heckel.ntfy.util.subscribe
 
 /**
  * @author : zhangqinggong
@@ -20,7 +20,7 @@ class TestActivity :AppCompatActivity() {
         btnSubscribe.setOnClickListener{
 //            Toast.makeText(this,"测试",Toast.LENGTH_LONG).show()
 //            subscribe()
-            initNotificationModule(this)
+            subscribe(this)
         }
     }
 }

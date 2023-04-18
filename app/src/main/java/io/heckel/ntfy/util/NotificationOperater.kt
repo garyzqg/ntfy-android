@@ -5,14 +5,11 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.work.*
-import io.heckel.ntfy.R
 import io.heckel.ntfy.app.Application
 import io.heckel.ntfy.db.Repository
-import io.heckel.ntfy.msg.ApiService
 import io.heckel.ntfy.msg.NotificationDispatcher
 import io.heckel.ntfy.service.SubscriberService
 import io.heckel.ntfy.service.SubscriberServiceManager
@@ -25,13 +22,15 @@ import java.util.concurrent.TimeUnit
  * @author : zhangqinggong
  * date    : 2023/2/22 10:14
  * desc    : 消息推送组件工具类
- * 顶层函数实现
  */
 private var workManager: WorkManager? = null // Context-dependent
 private var dispatcher: NotificationDispatcher? = null // Context-dependent
 private lateinit var repository: Repository
 
-fun initNotificationModule(context:Context){
+/**
+ * 订阅
+ */
+fun subscribe(context: Context){
     workManager = WorkManager.getInstance(context)
     repository = (context.applicationContext as Application).repository;
     dispatcher = NotificationDispatcher(context,repository)
@@ -41,6 +40,7 @@ fun initNotificationModule(context:Context){
 
     // Subscribe to control Firebase channel (so we can re-start the foreground service if it dies)
 //    messenger.subscribe(ApiService.CONTROL_TOPIC)
+    //手动启动一次前台组件
     SubscriberServiceManager.refresh(context)
 
     // Background things
@@ -55,10 +55,13 @@ fun initNotificationModule(context:Context){
     // Permissions
     maybeRequestNotificationPermission(context)
 }
-fun subscribe(){
+
+/**
+ * 用户鉴权
+ */
+fun Auth(){
 
 }
-
 private fun schedulePeriodicPollWorker() {
     val workerVersion = repository.getPollWorkerVersion()
     val workPolicy = if (workerVersion == PollWorker.VERSION) {//取versioncode
